@@ -1,14 +1,16 @@
-# solvex
+# solvex-sdk
 
 Python client for the [Solvex](https://solvex.run) FunCaptcha solving API.
 
 ## Install
 
 ```bash
-pip install solvex
+pip install solvex-sdk
 # or, from this repo:
 pip install .
 ```
+
+The distribution is published as `solvex-sdk`; the import name is `solvex`.
 
 Requires Python 3.10+. Depends on `httpx`.
 

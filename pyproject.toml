@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "solvex"
+name = "solvex-sdk"
 version = "0.1.0"
 description = "Python client for the Solvex FunCaptcha solving API."
 readme = "README.md"
