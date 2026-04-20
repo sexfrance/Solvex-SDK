@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "solvex"
+version = "0.1.0"
+description = "Python client for the Solvex FunCaptcha solving API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Solvex" }]
+keywords = ["captcha", "funcaptcha", "arkose", "roblox", "solver", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet",
+]
+dependencies = [
+    "httpx>=0.26,<1.0",
+]
+
+[project.urls]
+Homepage = "https://solvex.run"
+Documentation = "https://solvex.run/docs"
+Repository = "https://github.com/sexfrance/ARK-FC-REVERSE"
+Issues = "https://github.com/sexfrance/ARK-FC-REVERSE/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["solvex"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "solvex",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
