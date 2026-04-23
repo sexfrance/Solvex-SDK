@@ -49,11 +49,12 @@ class FunCaptchaTask:
     website_url: str
     website_public_key: str
     proxy: Proxy
-    data: str | None = None           # optional Arkose "data" blob string
-    cookies: str | None = None        # optional raw Cookie header (required with logged-in blobs)
-    user_agent: str | None = None     # optional UA override
+    cookies: str                      # Cookie header from the session that emitted the blob (required)
+    data: str | None = None           # Arkose dataExchangeBlob string
+    user_agent: str | None = None     # Safari UA override — must be macOS Safari if provided
     use_http3: bool | None = None     # None = server default (enabled)
     solve_pow: bool | None = None     # None = server default (off)
+    browser: str | None = None        # "safari" / "auto" / specific profile name
 
     def to_api_payload(self) -> dict[str, Any]:
         """Shape for the ``task`` field of createTask."""
@@ -71,14 +72,15 @@ class FunCaptchaTask:
             payload["proxyPassword"] = self.proxy.password
         if self.data is not None:
             payload["data"] = self.data
-        if self.cookies is not None:
-            payload["cookies"] = self.cookies
+        payload["cookies"] = self.cookies
         if self.user_agent is not None:
             payload["userAgent"] = self.user_agent
         if self.use_http3 is not None:
             payload["useHttp3"] = self.use_http3
         if self.solve_pow is not None:
             payload["solvePow"] = self.solve_pow
+        if self.browser is not None:
+            payload["browser"] = self.browser
         return payload
 
 

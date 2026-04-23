@@ -62,6 +62,28 @@ result = sx.solve(FunCaptchaTask(
 ))
 ```
 
+### Cookie formats
+
+The API accepts cookies in any of the shapes you'd get from common clients —
+they're normalized to a `Cookie:` header server-side:
+
+```python
+# Raw header string (default)
+cookies=".ROBLOSECURITY=...; RBXEventTrackerV2=..."
+
+# Python requests
+cookies=session.cookies.get_dict()
+
+# rnet — same dict shape
+cookies=dict(client.cookies)
+
+# Playwright / Selenium / Puppeteer
+cookies=[{"name": ".ROBLOSECURITY", "value": "..."}, {"name": "RBXEventTrackerV2", "value": "..."}]
+
+# List of pair strings
+cookies=[".ROBLOSECURITY=...", "RBXEventTrackerV2=..."]
+```
+
 ## PoW-flagged sessions
 
 When Arkose returns `pow=true`, the server can solve the PoW challenge and
@@ -153,6 +175,17 @@ sx.solve(task, idempotency_key=f"user-42-{run_id}")
 
 Set `use_http3=False` on the task to force HTTP/2 (useful when debugging
 proxies that mangle h3). Default is server-side (h3 enabled).
+
+## Browser profile
+
+Set `browser=` to route the solve through a specific fingerprints_v2 profile.
+Accepts a family alias (`"firefox"`, `"chrome"`, `"brave"`, `"edge"`,
+`"safari"`) or a specific profile name (`"firefox_win_140"`,
+`"chrome_win_141"`, etc.). Omit or pass `"auto"` for the legacy Safari path.
+
+```python
+task = FunCaptchaTask(..., browser="firefox")
+```
 
 ## License
 
