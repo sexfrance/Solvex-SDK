@@ -9,7 +9,64 @@ from typing import Any
 import httpx
 
 from .exceptions import SolvexError, TaskTimeoutError, exception_for
-from .models import FunCaptchaTask, TaskResult
+from .models import (
+    AmazonAwsClassificationTask,
+    AmazonAwsTask,
+    AmazonAwsTaskImage,
+    AmazonAwsTaskInvisible,
+    FunCaptchaTask,
+    TaskResult,
+    _parse_classification_cell,
+)
+
+# Any task type accepted by .solve() / .create_task().  Kept loose because
+# Python's Union types over Protocols are awkward — every task class
+# exposes .to_api_payload() which is the only contract the client needs.
+SolveTask = (
+    FunCaptchaTask
+    | AmazonAwsTask
+    | AmazonAwsTaskInvisible
+    | AmazonAwsTaskImage
+    | AmazonAwsClassificationTask
+)
+
+
+def _build_task_result(task_id: str, data: dict[str, Any]) -> TaskResult:
+    """Shape /getTaskResult's status='ready' payload into a TaskResult,
+    handling both token-issuing solves and classification predictions.
+    """
+    sol = data.get("solution") or {}
+
+    # Token path — FunCaptcha + AmazonAws (solving variants).
+    token = sol.get("token")
+    predictions = None
+
+    # Classification path — convert the per-cell dicts into typed entries.
+    raw_preds = sol.get("predictions")
+    if isinstance(raw_preds, list):
+        predictions = [_parse_classification_cell(p) for p in raw_preds]
+
+    if not isinstance(token, str):
+        token = ""
+
+    if not token and predictions is None:
+        raise SolvexError(
+            "ready task carries neither solution.token nor solution.predictions"
+        )
+
+    return TaskResult(
+        task_id=task_id,
+        status="ready",
+        token=token,
+        predictions=predictions,
+        # imageSolved is server-set on AmazonAws solving tasks; coerce to
+        # bool because older server builds may omit the field entirely.
+        image_solved=bool(sol.get("imageSolved", False)),
+        cost_usd=float(data.get("cost") or 0.0),
+        create_time=data.get("createTime"),
+        end_time=data.get("endTime"),
+        raw=data,
+    )
 
 DEFAULT_BASE_URL = "https://api.solvex.run"
 DEFAULT_POLL_INTERVAL = 0.5        # seconds between getTaskResult calls
@@ -91,7 +148,7 @@ class SolvexClient:
             raise SolvexError(f"{path}: non-JSON response (HTTP {r.status_code})") from e
         return _handle_envelope(data)
 
-    def create_task(self, task: FunCaptchaTask, *, idempotency_key: str | None = None) -> str:
+    def create_task(self, task: SolveTask, *, idempotency_key: str | None = None) -> str:
         body: dict[str, Any] = {"task": task.to_api_payload()}
         if idempotency_key is not None:
             body["idempotencyKey"] = idempotency_key
@@ -118,13 +175,18 @@ class SolvexClient:
 
     def solve(
         self,
-        task: FunCaptchaTask,
+        task: SolveTask,
         *,
         timeout: float = DEFAULT_TIMEOUT,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         idempotency_key: str | None = None,
     ) -> TaskResult:
         """Submit a task, poll until ready, return the result.
+
+        Works for every task type the SDK supports — token-issuing
+        (FunCaptcha + AmazonAws solving) and classification.  Inspect
+        ``result.is_classification`` (or ``result.predictions``) to tell
+        them apart.
 
         Raises ``TaskTimeoutError`` if the task doesn't complete inside
         ``timeout`` seconds. Raises ``TaskFailedError`` if the server reports
@@ -137,19 +199,7 @@ class SolvexClient:
             data = self.get_task_result(task_id)
             status = data.get("status")
             if status == "ready":
-                sol = data.get("solution") or {}
-                token = sol.get("token")
-                if not isinstance(token, str):
-                    raise SolvexError("solved task missing solution.token")
-                return TaskResult(
-                    task_id=task_id,
-                    status="ready",
-                    token=token,
-                    cost_usd=float(data.get("cost") or 0.0),
-                    create_time=data.get("createTime"),
-                    end_time=data.get("endTime"),
-                    raw=data,
-                )
+                return _build_task_result(task_id, data)
             # status == "processing" or still "pending": keep polling
             if time.monotonic() >= deadline:
                 raise TaskTimeoutError(
@@ -204,7 +254,7 @@ class AsyncSolvexClient:
         return _handle_envelope(data)
 
     async def create_task(
-        self, task: FunCaptchaTask, *, idempotency_key: str | None = None,
+        self, task: SolveTask, *, idempotency_key: str | None = None,
     ) -> str:
         body: dict[str, Any] = {"task": task.to_api_payload()}
         if idempotency_key is not None:
@@ -230,7 +280,7 @@ class AsyncSolvexClient:
 
     async def solve(
         self,
-        task: FunCaptchaTask,
+        task: SolveTask,
         *,
         timeout: float = DEFAULT_TIMEOUT,
         poll_interval: float = DEFAULT_POLL_INTERVAL,
@@ -243,19 +293,7 @@ class AsyncSolvexClient:
             data = await self.get_task_result(task_id)
             status = data.get("status")
             if status == "ready":
-                sol = data.get("solution") or {}
-                token = sol.get("token")
-                if not isinstance(token, str):
-                    raise SolvexError("solved task missing solution.token")
-                return TaskResult(
-                    task_id=task_id,
-                    status="ready",
-                    token=token,
-                    cost_usd=float(data.get("cost") or 0.0),
-                    create_time=data.get("createTime"),
-                    end_time=data.get("endTime"),
-                    raw=data,
-                )
+                return _build_task_result(task_id, data)
             if time.monotonic() >= deadline:
                 raise TaskTimeoutError(
                     f"task {task_id} did not finish within {timeout:.1f}s",

@@ -1,4 +1,10 @@
-"""Solvex — Python client for the Solvex FunCaptcha solving API."""
+"""Solvex — Python client for the Solvex captcha solving API.
+
+Supports FunCaptcha (Arkose Labs) and the four AmazonAws* task types:
+``AmazonAwsTask`` (full WAF chain), ``AmazonAwsTaskInvisible`` (PoW only),
+``AmazonAwsTaskImage`` (image grid only), and ``AmazonAwsClassificationTask``
+(standalone image classifier — no WAF context, no proxy).
+"""
 
 from __future__ import annotations
 
@@ -14,12 +20,28 @@ from .exceptions import (
     UnsupportedSiteKeyError,
     UnsupportedTaskError,
 )
-from .models import FunCaptchaTask, Proxy, TaskResult
+from .models import (
+    AmazonAwsClassificationTask,
+    AmazonAwsTask,
+    AmazonAwsTaskImage,
+    AmazonAwsTaskInvisible,
+    ClassificationCell,
+    ClassificationTopKEntry,
+    FunCaptchaTask,
+    Proxy,
+    TaskResult,
+)
 
 __all__ = [
     "SolvexClient",
     "AsyncSolvexClient",
     "FunCaptchaTask",
+    "AmazonAwsTask",
+    "AmazonAwsTaskInvisible",
+    "AmazonAwsTaskImage",
+    "AmazonAwsClassificationTask",
+    "ClassificationCell",
+    "ClassificationTopKEntry",
     "Proxy",
     "TaskResult",
     "SolvexError",
@@ -33,4 +55,4 @@ __all__ = [
     "UnsupportedTaskError",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
